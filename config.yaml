@@ -1,5 +1,5 @@
 data:
-  raw_dir: "C:\\Users\\User\\.cache\\kagglehub\\datasets\\feyzazkefe"
+  raw_dataset: "C:\\Users\\User\\.cache\\kagglehub\\datasets\\feyzazkefe"
   img_size: 224
   batch_size: 32
   num_workers: 2
@@ -17,4 +17,4 @@ training:
   patience_early_stopping: 3
 
 outputs:
-  checkpoint_path: "data\\best_mobilenetv3.pth"
+  checkpoint_path: "data\\"
