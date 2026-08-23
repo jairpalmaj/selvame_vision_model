@@ -1,4 +1,4 @@
-from src.dataset import get_dataloaders # Metodo para obtener los datasets
+from src.dataset import get_dataloaders
 from src.model import build_model   # Placeholder para la base del modelo
 # from src.model import compile_model # Placeholder para la compilación del modelo
 from src.model import train_model   # Placeholder para bucle de entrenamiento
@@ -9,30 +9,15 @@ class MainFrame:
     """
     Esta clase contiene el flujo central para entrenar el modelo.
     Cada etapa de dicho entrenamiento se intenta realizar en cada uno de
-    los metodos en caso que se requieran crear mas modelos sin tener que
+    los metodos por se requieren crear mas modelos sin tener que
     pasar por todo el flujo nuevamente.
     """
-    def __init__(self, config_path='config.yaml'):
+    def __init__(self, config_path='config.yaml') -> None:
         with open(config_path, 'r', encoding='utf-8') as config_file:
             config = yaml.safe_load(config_file)
-        for section in config.values():
-        # atributos de la clase creados a partir del yaml de configuracion
-            if isinstance(section, dict):
-                for key, value in section.items():
-                    setattr(self, key, value)
-
-        # requested_device = self.device
-        # if requested_device == "cuda" and not torch.cuda.is_available():
-        #     requested_device = "cpu"
-        # self.device = torch.device(requested_device)
-
-        # Inicializar dataset
         self.train_loader, self.val_loader, self.test_loader, self.class_names = get_dataloaders(
-            data_dir=self.raw_dataset,
-            batch_size=self.batch_size,
-            img_size=self.img_size,
-            seed=self.seed
-        )
+            config
+        ) # Metodo para obtener los datasets
         self.base_model(self)
 
     def base_model(self):
@@ -67,7 +52,7 @@ class MainFrame:
         """Evalúa el modelo en el conjunto de prueba (placeholder)."""
 
 def main():
-    overall_model = MainFrame()
+    overall_model = MainFrame(config_path='C:\\Users\\User\\Documents\\master_ai\\seminario_innovacion\\vision_model\\config.yaml')
     overall_model.base_model()
     model_alpha = overall_model.model_top_layers('./data/crafter_alpha.yaml')
     model_beta = overall_model.model_top_layers('./data/crafter_beta.yaml')

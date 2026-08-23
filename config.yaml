@@ -1,11 +1,11 @@
 data:
-  raw_dataset: "C:\\Users\\User\\.cache\\kagglehub\\datasets\\feyzazkefe"
+  raw_dataset: "C:\\Users\\User\\.cache\\kagglehub\\datasets\\feyzazkefe\\trashnet\\versions\\1\\dataset-resized"
   img_size: 224
   batch_size: 32
   num_workers: 2
-  train_ratio: 0.70
-  val_ratio: 0.15
-  test_ratio: 0.15
+  train_ratio: 0.80
+  val_ratio: 0.10
+  test_ratio: 0.10
 
 training:
   seed: 42
