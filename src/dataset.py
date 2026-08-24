@@ -6,13 +6,21 @@ from torchvision import datasets, transforms
 from typing import Any, Dict, List, Tuple
 
 
-def get_dataloaders(config_yaml: Dict[str, Dict[Any, Any]]) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
-	
-	"""Create stratified train, validation, and test data loaders.
+def scale_for_keras_mobilenet(image: torch.Tensor) -> torch.Tensor:
+	return image * 2.0 - 1.0
 
-	The dataset root must contain one subdirectory per class, as expected by
-	``torchvision.datasets.ImageFolder``. Ratios can be supplied in the
-	``data`` configuration section; they default to 80/10/10.
+
+def channels_last(image: torch.Tensor) -> torch.Tensor:
+	return image.permute(1, 2, 0)
+
+
+def get_dataloaders(config_yaml: Dict[str, Dict[str, Any]]) -> Tuple[DataLoader, DataLoader, DataLoader, List[str]]:
+	"""
+	Se generan los dataloaders para cada subconjunto de entrenamiento y prueba
+	estratificados y normalizados.
+	
+	Args (dict): Diccionario con la informacion de config.yaml
+	Return (DataLoader, list): Un objeto DataLoader para cada subconjunto
 	"""
 	data_config = config_yaml["data"]
 	dataset_path = Path(data_config["raw_dataset"])
@@ -26,24 +34,22 @@ def get_dataloaders(config_yaml: Dict[str, Dict[Any, Any]]) -> Tuple[DataLoader,
 
 	ratios_total = train_ratio + validation_ratio + test_ratio
 	if not 0 < train_ratio < 1 or not 0 < validation_ratio < 1 or not 0 < test_ratio < 1:
-		raise ValueError("train_ratio, val_ratio, and test_ratio must be between 0 and 1")
+		raise ValueError("train_ratio, val_ratio, y test_ratio deben ser entre 0 y 1")
 	if abs(ratios_total - 1.0) > 1e-6:
-		raise ValueError("train_ratio, val_ratio, and test_ratio must sum to 1")
+		raise ValueError("train_ratio, val_ratio, y test_ratio deben sumar 1")
 
-	normalization = transforms.Normalize(
-		mean=[0.485, 0.456, 0.406],
-		std=[0.229, 0.224, 0.225],
-	)
 	train_transform = transforms.Compose([
 		transforms.Resize((image_size, image_size)),
 		transforms.RandomHorizontalFlip(),
 		transforms.ToTensor(),
-		normalization,
+		transforms.Lambda(scale_for_keras_mobilenet),
+		transforms.Lambda(channels_last),
 	])
 	evaluation_transform = transforms.Compose([
 		transforms.Resize((image_size, image_size)),
 		transforms.ToTensor(),
-		normalization,
+		transforms.Lambda(scale_for_keras_mobilenet),
+		transforms.Lambda(channels_last),
 	])
 
 	base_dataset = datasets.ImageFolder(dataset_path)
