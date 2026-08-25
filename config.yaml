@@ -17,4 +17,4 @@ training:
   patience_early_stopping: 3
 
 outputs:
-  checkpoint_path: "data\\"
+  checkpoint_path: "data"
