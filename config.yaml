@@ -1,0 +1,20 @@
+data:
+  raw_dataset: "C:\\Users\\User\\.cache\\kagglehub\\datasets\\feyzazkefe\\trashnet\\versions\\1\\dataset-resized"
+  img_size: 224
+  batch_size: 32
+  num_workers: 2
+  train_ratio: 0.80
+  val_ratio: 0.10
+  test_ratio: 0.10
+
+training:
+  seed: 42
+  device: "cuda"
+  epochs_phase1: 5
+  epochs_phase2: 10
+  lr_phase1: 0.001
+  lr_phase2: 0.00001
+  patience_early_stopping: 3
+
+outputs:
+  checkpoint_path: "data"
