@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 from keras_core import layers, models
-from keras_core.applications import MobileNetV2
+from keras_core.applications import MobileNetV3Small
 from keras_core.callbacks import EarlyStopping
 
 
@@ -20,7 +20,7 @@ def save_training_history(history: Dict[str, List[float]], output_dir: Path) -> 
 
     accuracy_axis.plot(epochs, history["accuracy"], label="Entrenamiento")
     accuracy_axis.plot(epochs, history["val_accuracy"], label="Validacion")
-    accuracy_axis.set_title("Accuracy - MobileNetV2")
+    accuracy_axis.set_title("Accuracy - MobileNetV3Small")
     accuracy_axis.set_xlabel("Epocas")
     accuracy_axis.set_ylabel("Accuracy")
     accuracy_axis.legend()
@@ -28,7 +28,7 @@ def save_training_history(history: Dict[str, List[float]], output_dir: Path) -> 
 
     loss_axis.plot(epochs, history["loss"], label="Entrenamiento")
     loss_axis.plot(epochs, history["val_loss"], label="Validacion")
-    loss_axis.set_title("Loss - MobileNetV2")
+    loss_axis.set_title("Loss - MobileNetV3Small")
     loss_axis.set_xlabel("Epocas")
     loss_axis.set_ylabel("Loss")
     loss_axis.legend()
@@ -47,7 +47,7 @@ def transfer_learning(
     train_dataset = loaders[0]
     val_dataset = loaders[1]
     class_names = loaders[3]
-    base_model = MobileNetV2(
+    base_model = MobileNetV3Small(
         input_shape=(IMG_SIZE, IMG_SIZE, 3),
         include_top=False,
         weights='imagenet'
@@ -57,7 +57,7 @@ def transfer_learning(
     x = base_model(inputs, training=False)
     x = layers.GlobalAveragePooling2D()(x)
     x = layers.Dense(128, activation='relu')(x)
-    x = layers.Dropout(0.6)(x)
+    x = layers.Dropout(0.4)(x)
     outputs = layers.Dense(len(class_names), activation='softmax')(x)
 
     transfered_model = models.Model(inputs, outputs)
@@ -82,8 +82,8 @@ def transfer_learning(
         for metric, values in history.history.items()
     }
     save_training_history(history_data, output_dir)
-    transfered_model.save(output_dir / "mobilenetv2_transfer_learning.keras")
-    transfered_model.save_weights(output_dir / "mobilenetv2_transfer_learning.weights.h5")
+    transfered_model.save(output_dir / "mobilenetv3small_transfer_learning.keras")
+    transfered_model.save_weights(output_dir / "mobilenetv3small_transfer_learning.weights.h5")
 
     return transfered_model
 

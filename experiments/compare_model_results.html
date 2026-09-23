@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MobileNetV3Large Transfer Learning vs Fine Tuning</title>
+    <style>
+        :root {
+            --ink: #17212b;
+            --muted: #64727d;
+            --line: #dbe3e7;
+            --paper: #f5f7f2;
+            --panel: #ffffff;
+            --v2: #147d92;
+            --v3: #d95f3f;
+            --good: #237a4b;
+            --bad: #b33a36;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            color: var(--ink);
+            background: linear-gradient(135deg, #f5f7f2 0%, #e7f0ed 100%);
+            font-family: Georgia, "Times New Roman", serif;
+        }
+        main { width: min(1440px, calc(100% - 40px)); margin: 0 auto; padding: 42px 0 56px; }
+        header { display: flex; justify-content: space-between; gap: 24px; align-items: end; margin-bottom: 30px; }
+        h1 { margin: 0; max-width: 720px; font-size: clamp(2.2rem, 5vw, 4.8rem); line-height: .94; letter-spacing: -1px; }
+        .subtitle { max-width: 420px; color: var(--muted); font: 15px/1.5 Arial, sans-serif; }
+        .toolbar, .panel { background: rgba(255,255,255,.88); border: 1px solid var(--line); box-shadow: 0 12px 30px rgba(33, 57, 62, .08); }
+        .toolbar { padding: 16px; display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; margin-bottom: 20px; }
+        .toolbar label { font: 700 13px Arial, sans-serif; color: var(--muted); }
+        input[type=file], select { margin-left: 7px; font: 13px Arial, sans-serif; }
+        .status { margin-left: auto; color: var(--muted); font: 13px Arial, sans-serif; }
+        .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+        .model-card { padding: 24px; min-height: 205px; position: relative; overflow: hidden; }
+        .model-card::after { content: ""; position: absolute; width: 170px; height: 170px; right: -55px; bottom: -80px; border-radius: 50%; background: currentColor; opacity: .09; }
+        .model-card.v2 { color: var(--v2); }
+        .model-card.v3 { color: var(--v3); }
+        .model-card h2 { margin: 0 0 16px; font-size: 1.5rem; color: var(--ink); }
+        .metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .metric strong { display: block; font-size: 2.25rem; color: currentColor; }
+        .metric span { color: var(--muted); font: 12px Arial, sans-serif; text-transform: uppercase; letter-spacing: .06em; }
+        .comparison { padding: 24px; margin-bottom: 18px; }
+        .comparison h2, .results h2 { margin: 0 0 18px; font-size: 1.5rem; }
+        .bar { margin: 14px 0; }
+        .bar-label { display: flex; justify-content: space-between; font: 13px Arial, sans-serif; margin-bottom: 5px; }
+        .track { height: 13px; background: #e8edef; overflow: hidden; }
+        .fill { height: 100%; transition: width .5s ease; }
+        .fill.v2 { background: var(--v2); }
+        .fill.v3 { background: var(--v3); }
+        .results { padding: 24px; }
+        .table-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; }
+        #search { min-width: 230px; padding: 9px 11px; border: 1px solid var(--line); font: 14px Arial, sans-serif; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font: 14px Arial, sans-serif; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+        th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+        .confidence { color: var(--muted); }
+        .correct { color: var(--good); font-weight: 700; }
+        .incorrect { color: var(--bad); font-weight: 700; }
+        .empty { padding: 50px 10px; text-align: center; color: var(--muted); font: 15px Arial, sans-serif; }
+        @media (max-width: 800px) {
+            main { width: min(100% - 24px, 680px); padding-top: 24px; }
+            header, .hero-grid { display: block; }
+            .subtitle { margin-top: 16px; }
+            .model-card { margin-bottom: 14px; }
+            .status { width: 100%; margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+<main>
+    <header>
+        <h1>MobileNetV3Large Transfer Learning vs Fine Tuning</h1>
+        <div class="subtitle">Comparison of the MobileNetV3Large image consultations with transfer learning and fine tuning approaches, including confidence, predicted classes, and agreement with the supplied human verdict.</div>
+    </header>
+
+    <section class="toolbar">
+        <label>Transfer Learning JSON <input id="v2File" type="file" accept="application/json,.json"></label>
+        <label>Fine Tuning JSON <input id="v3File" type="file" accept="application/json,.json"></label>
+        <input id="search" type="search" placeholder="Filter by image name...">
+        <span id="status" class="status">Loading report data...</span>
+    </section>
+
+    <section class="hero-grid">
+        <article class="panel model-card v2">
+            <h2>Transfer Learning</h2>
+            <div class="metric-row">
+                <div class="metric"><strong id="v2Accuracy">-</strong><span>match rate</span></div>
+                <div class="metric"><strong id="v2Confidence">-</strong><span>avg confidence</span></div>
+                <div class="metric"><strong id="v2Count">-</strong><span>images</span></div>
+            </div>
+        </article>
+        <article class="panel model-card v3">
+            <h2>Fine Tuning</h2>
+            <div class="metric-row">
+                <div class="metric"><strong id="v3Accuracy">-</strong><span>match rate</span></div>
+                <div class="metric"><strong id="v3Confidence">-</strong><span>avg confidence</span></div>
+                <div class="metric"><strong id="v3Count">-</strong><span>images</span></div>
+            </div>
+        </article>
+    </section>
+
+    <section class="panel comparison">
+        <h2>At a glance</h2>
+        <div class="bar"><div class="bar-label"><span>Match rate · Transfer Learning</span><strong id="v2AccuracyLabel">-</strong></div><div class="track"><div id="v2AccuracyBar" class="fill v2"></div></div></div>
+        <div class="bar"><div class="bar-label"><span>Match rate · Fine Tuning</span><strong id="v3AccuracyLabel">-</strong></div><div class="track"><div id="v3AccuracyBar" class="fill v3"></div></div></div>
+        <div class="bar"><div class="bar-label"><span>Average confidence · Transfer Learning</span><strong id="v2ConfidenceLabel">-</strong></div><div class="track"><div id="v2ConfidenceBar" class="fill v2"></div></div></div>
+        <div class="bar"><div class="bar-label"><span>Average confidence · Fine Tuning</span><strong id="v3ConfidenceLabel">-</strong></div><div class="track"><div id="v3ConfidenceBar" class="fill v3"></div></div></div>
+    </section>
+
+    <section class="panel results">
+        <div class="table-head"><h2>Image-by-image results</h2><span id="winner" class="status"></span></div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Image</th><th>Human verdict</th><th>Transfer Learning prediction</th><th>Transfer Learning confidence</th><th>Fine Tuning prediction</th><th>Fine Tuning confidence</th></tr></thead>
+                <tbody id="resultsBody"></tbody>
+            </table>
+            <div id="empty" class="empty">Choose the two JSON files if the report could not load them automatically.</div>
+        </div>
+    </section>
+</main>
+<script>
+    const files = {
+        v2: "qa_mobilenetv3large_transferlearning.json",
+        v3: "qa_mobilenetv3large_finetuning.json"
+    };
+    let v2Data = null;
+    let v3Data = null;
+
+    const getCases = data => Object.fromEntries(
+        (data?.test_cases || []).flatMap(item => Object.entries(item))
+    );
+    const verdicts = value => String(value || "").split("/").map(item => item.trim().toLowerCase()).filter(Boolean);
+    const isCorrect = item => verdicts(item.human_verdict).includes(String(item.class_predicted || "").toLowerCase());
+    const percent = value => `${(value * 100).toFixed(1)}%`;
+    const average = items => items.length ? items.reduce((sum, item) => sum + Number(item.accuracy || 0), 0) / items.length : 0;
+    const stats = data => {
+        const items = Object.values(getCases(data));
+        return {
+            count: items.length,
+            accuracy: items.length ? items.filter(isCorrect).length / items.length : 0,
+            confidence: average(items)
+        };
+    };
+
+    function setMetric(id, value) { document.getElementById(id).textContent = value; }
+    function setBar(id, value) { document.getElementById(id).style.width = `${Math.max(0, Math.min(100, value * 100))}%`; }
+
+    function render() {
+        if (!v2Data || !v3Data) return;
+        const v2 = stats(v2Data);
+        const v3 = stats(v3Data);
+        setMetric("v2Accuracy", percent(v2.accuracy)); setMetric("v3Accuracy", percent(v3.accuracy));
+        setMetric("v2Confidence", percent(v2.confidence)); setMetric("v3Confidence", percent(v3.confidence));
+        setMetric("v2Count", v2.count); setMetric("v3Count", v3.count);
+        setMetric("v2AccuracyLabel", percent(v2.accuracy)); setMetric("v3AccuracyLabel", percent(v3.accuracy));
+        setMetric("v2ConfidenceLabel", percent(v2.confidence)); setMetric("v3ConfidenceLabel", percent(v3.confidence));
+        setBar("v2AccuracyBar", v2.accuracy); setBar("v3AccuracyBar", v3.accuracy);
+        setBar("v2ConfidenceBar", v2.confidence); setBar("v3ConfidenceBar", v3.confidence);
+        const winner = v2.accuracy === v3.accuracy ? "Tie in match rate" : `${v2.accuracy > v3.accuracy ? "MobileNetV2" : "MobileNetV3Large"} leads by ${percent(Math.abs(v2.accuracy - v3.accuracy))}`;
+        setMetric("winner", winner);
+
+        const v2Cases = getCases(v2Data);
+        const v3Cases = getCases(v3Data);
+        const names = [...new Set([...Object.keys(v2Cases), ...Object.keys(v3Cases)])].sort();
+        const query = document.getElementById("search").value.toLowerCase();
+        const body = document.getElementById("resultsBody");
+        body.innerHTML = names.filter(name => name.toLowerCase().includes(query)).map(name => {
+            const a = v2Cases[name] || {};
+            const b = v3Cases[name] || {};
+            const aClass = a.class_predicted ? (isCorrect(a) ? "correct" : "incorrect") : "";
+            const bClass = b.class_predicted ? (isCorrect(b) ? "correct" : "incorrect") : "";
+            return `<tr><td>${name}</td><td>${a.human_verdict || b.human_verdict || "-"}</td><td class="${aClass}">${a.class_predicted || "-"}</td><td class="confidence">${a.accuracy == null ? "-" : percent(a.accuracy)}</td><td class="${bClass}">${b.class_predicted || "-"}</td><td class="confidence">${b.accuracy == null ? "-" : percent(b.accuracy)}</td></tr>`;
+        }).join("");
+        document.getElementById("empty").style.display = body.children.length ? "none" : "block";
+        document.getElementById("status").textContent = `${names.length} images loaded`;
+    }
+
+    async function loadDefault(name) {
+        try {
+            const response = await fetch(files[name]);
+            if (!response.ok) throw new Error("Unable to load file");
+            const data = await response.json();
+            if (name === "v2") v2Data = data; else v3Data = data;
+            render();
+        } catch (error) {
+            document.getElementById("status").textContent = "Select both JSON files above when opening locally";
+        }
+    }
+
+    function loadSelected(input, name) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = event => {
+            const data = JSON.parse(event.target.result);
+            if (name === "v2") v2Data = data; else v3Data = data;
+            render();
+        };
+        reader.readAsText(file);
+    }
+
+    document.getElementById("v2File").addEventListener("change", event => loadSelected(event.target, "v2"));
+    document.getElementById("v3File").addEventListener("change", event => loadSelected(event.target, "v3"));
+    document.getElementById("search").addEventListener("input", render);
+    loadDefault("v2");
+    loadDefault("v3");
+</script>
+</body>
+</html>
